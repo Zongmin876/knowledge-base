@@ -1,6 +1,6 @@
-/** 全站骨架：左侧固定导航 + 顶部全局搜索 + 主内容（Outlet）。复刻 pages 原型布局。 */
-import { useEffect, useState, type FormEvent } from 'react';
-import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
+/** 全站骨架：左侧固定导航 + 主内容（Outlet）。顶栏由各页自带（搜索顶栏 / 返回顶栏）。 */
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { api } from '../api/client.ts';
 
 const NAV = [
@@ -11,29 +11,12 @@ const NAV = [
 ];
 
 export function AppLayout() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const [q, setQ] = useState('');
   const [count, setCount] = useState<number | null>(null);
 
   useEffect(() => {
     api.stats().then((s) => setCount(s.knowledge)).catch(() => setCount(null));
   }, [location.key]);
-
-  // 顶栏搜索框与 URL 中的 q 同步（在检索页显示当前 query）。
-  useEffect(() => {
-    if (location.pathname === '/search') {
-      const params = new URLSearchParams(location.search);
-      setQ(params.get('q') ?? '');
-    }
-  }, [location.pathname, location.search]);
-
-  const onSearch = (e: FormEvent) => {
-    e.preventDefault();
-    const term = q.trim();
-    if (!term) return;
-    navigate(`/search?q=${encodeURIComponent(term)}`);
-  };
 
   return (
     <div className="layout">
@@ -56,23 +39,7 @@ export function AppLayout() {
           {count === null ? '· · ·' : `共 ${count} 条知识`}
         </div>
       </aside>
-
       <div className="main">
-        <header className="topbar">
-          <form className="search" onSubmit={onSearch} role="search">
-            <span className="si">🔍</span>
-            <input
-              type="text"
-              aria-label="全局搜索"
-              placeholder="用大白话搜，比如「上次那篇讲缓存击穿的」"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </form>
-          <button className="btn btn-primary" onClick={() => navigate('/new')}>
-            <span>＋</span>新增知识
-          </button>
-        </header>
         <Outlet />
       </div>
     </div>

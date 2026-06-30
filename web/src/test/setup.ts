@@ -19,3 +19,19 @@ vi.stubGlobal('IntersectionObserver', IOStub);
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
 }
+
+// 部分 jsdom 环境 localStorage 不完整：提供内存实现。
+if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'function') {
+  const store = new Map<string, string>();
+  const mem: Storage = {
+    get length() {
+      return store.size;
+    },
+    clear: () => store.clear(),
+    getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+    key: (i: number) => Array.from(store.keys())[i] ?? null,
+    removeItem: (k: string) => store.delete(k) as unknown as void,
+    setItem: (k: string, v: string) => void store.set(k, String(v)),
+  };
+  vi.stubGlobal('localStorage', mem);
+}

@@ -5,6 +5,7 @@
  */
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { SearchTopbar } from '../components/SearchTopbar.tsx';
 import { api } from '../api/client.ts';
 import type { Knowledge, SourceType } from '../api/types.ts';
 import { SOURCE_META } from '../api/types.ts';
@@ -100,6 +101,8 @@ export function KnowledgeListPage() {
   }, [hasMore, loading, loadingMore, page, load]);
 
   return (
+    <>
+    <SearchTopbar />
     <div className="content">
       <div className="page-head">
         <div>
@@ -158,5 +161,6 @@ export function KnowledgeListPage() {
         </>
       )}
     </div>
+    </>
   );
 }

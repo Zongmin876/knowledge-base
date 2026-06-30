@@ -48,6 +48,10 @@ button { font-family: inherit; }
 }
 .search input:focus { outline: none; background: var(--bg-surface); border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--ring-focus); }
 .search .si { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text-faint); }
+.topbar-back { gap: var(--sp-3); }
+.topbar .back { color: var(--text-muted); font-size: var(--fs-sm); background: none; border: none; cursor: pointer; }
+.topbar .back:hover { color: var(--text-body); }
+.topbar-title { font-size: var(--fs-h2); font-weight: var(--fw-semibold); color: var(--text-strong); }
 
 /* ===== 按钮 ===== */
 .btn {
@@ -102,6 +106,49 @@ button { font-family: inherit; }
 }
 .source { display: inline-flex; align-items: center; gap: 4px; color: var(--text-faint); font-size: var(--fs-xs); }
 .dotsep { color: var(--border-strong); }
+.tag-muted { background: var(--bg-subtle); color: var(--text-muted); }
+
+/* ===== 检索结果页 ===== */
+.result-head { margin-bottom: var(--sp-5); }
+.result-head h1 { font-size: var(--fs-h1); font-weight: var(--fw-bold); color: var(--text-strong); margin-bottom: var(--sp-2); }
+.result-head .q { color: var(--accent); }
+.result-head .meta { color: var(--text-muted); font-size: var(--fs-sm); }
+.ai-note {
+  display: flex; gap: var(--sp-3); background: var(--accent-soft); border: 1px solid var(--accent-border);
+  border-radius: var(--radius-md); padding: var(--sp-4); margin-bottom: var(--sp-5); color: var(--text-body); line-height: var(--lh-relaxed);
+}
+.ai-note .ai-ic { font-size: 20px; }
+.ai-note a { color: var(--accent); font-weight: var(--fw-medium); }
+.card-top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-2); }
+.relevance {
+  flex-shrink: 0; font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--accent);
+  background: var(--accent-soft); padding: 2px var(--sp-2); border-radius: var(--radius-full);
+}
+.hl { background: var(--warning-soft); color: var(--text-strong); padding: 0 2px; border-radius: 3px; font-weight: var(--fw-medium); }
+
+/* ===== 录入页：Tab / 状态 / 上传 ===== */
+.tabs { display: flex; gap: var(--sp-2); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-5); flex-wrap: wrap; }
+.tab {
+  padding: var(--sp-3) var(--sp-4); color: var(--text-muted); font-weight: var(--fw-medium); cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all var(--dur-fast) var(--ease);
+  background: none; border-top: none; border-left: none; border-right: none; font-size: var(--fs-body);
+}
+.tab:hover { color: var(--text-body); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+.row { display: flex; gap: var(--sp-3); }
+.row .input { flex: 1; }
+.actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-5); }
+.status { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4); border-radius: var(--radius-md); margin-top: var(--sp-4); font-size: var(--fs-sm); }
+.status.loading { background: var(--info-soft); color: var(--text-body); }
+.status.fail { background: var(--danger-soft); color: var(--text-body); }
+.status.ok { background: var(--success-soft); color: var(--text-body); }
+.spinner { width: 16px; height: 16px; border: 2px solid var(--accent-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.status .link { color: var(--accent); font-weight: var(--fw-medium); cursor: pointer; text-decoration: underline; background: none; border: none; font-size: inherit; }
+.upload { border: 2px dashed var(--border-strong); border-radius: var(--radius-lg); padding: var(--sp-8); text-align: center; color: var(--text-muted); cursor: pointer; transition: all var(--dur-normal) var(--ease); }
+.upload:hover, .upload.drag { border-color: var(--accent); background: var(--accent-soft); }
+.upload .big { font-size: 36px; margin-bottom: var(--sp-3); }
+.field .hint { color: var(--text-faint); font-size: var(--fs-sm); margin-bottom: var(--sp-2); font-weight: var(--fw-normal); }
 
 /* ===== 表单元素 ===== */
 .field { margin-bottom: var(--sp-4); }
