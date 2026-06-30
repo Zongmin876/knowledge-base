@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { SearchPage } from './SearchPage.tsx';
 import type { SearchResult } from '../api/types.ts';
@@ -86,6 +87,39 @@ describe('C-ST-03 无结果空态', () => {
     expect(screen.getByText('没找到相关知识')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '去问答' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '去录入' })).toBeInTheDocument();
+  });
+});
+
+describe('C-ST-04 点结果卡片进详情', () => {
+  beforeEach(() => mockSearch.mockReset());
+  it('点击结果卡片导航到对应知识详情', async () => {
+    mockSearch.mockResolvedValue(
+      result([
+        {
+          id: 'k77',
+          title: '缓存击穿',
+          summary: '',
+          snippet: '互斥锁解决',
+          source_type: 'note',
+          source_url: null,
+          tags: [],
+          relevance: 88,
+          created_at: new Date().toISOString(),
+        },
+      ]),
+    );
+    render(
+      <MemoryRouter initialEntries={['/search?q=击穿']}>
+        <Routes>
+          <Route path="/search" element={<SearchPage />} />
+          <Route path="/k/:id" element={<div>详情页 k77</div>} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const card = await screen.findByTestId('result-card');
+    expect(card).toHaveAttribute('href', '/k/k77');
+    await userEvent.click(card);
+    expect(await screen.findByText('详情页 k77')).toBeInTheDocument();
   });
 });
 

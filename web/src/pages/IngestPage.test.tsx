@@ -97,6 +97,18 @@ describe('C-ING-05 自动存草稿', () => {
   });
 });
 
+describe('C-ING-06 超大文件提示', () => {
+  it('上传超过 25MB 的文件显示拒绝提示，不入库', async () => {
+    renderPage();
+    await userEvent.click(screen.getByRole('tab', { name: '📄 上传文件' }));
+    const input = screen.getByLabelText('上传文件') as HTMLInputElement;
+    const big = new File(['x'], 'huge.pdf', { type: 'application/pdf' });
+    Object.defineProperty(big, 'size', { value: 26 * 1024 * 1024 });
+    await userEvent.upload(input, big);
+    expect(await screen.findByText(/文件过大/)).toBeInTheDocument();
+  });
+});
+
 describe('C-ING-08 防重复提交', () => {
   it('提交进行中按钮禁用，不会重复入库', async () => {
     let resolve!: (v: { id: string; deduped: boolean }) => void;
