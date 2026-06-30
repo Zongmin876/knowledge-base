@@ -48,6 +48,25 @@ export function DetailPage() {
     void loadAll();
   }, [loadAll]);
 
+  // 整理进行中时轮询刷新，标签/摘要就绪即停（真实异步整理反馈）。
+  const organizing = k?.organize_status === 'pending' || k?.organize_status === 'processing';
+  useEffect(() => {
+    if (!organizing || !id) return;
+    const timer = setInterval(async () => {
+      try {
+        const fresh = await api.getKnowledge(id);
+        setK(fresh);
+        if (fresh.organize_status === 'done' || fresh.organize_status === 'failed') {
+          const rel = await api.related(id).catch(() => ({ items: [] }));
+          setRelated(rel.items);
+        }
+      } catch {
+        /* 轮询失败下次再试 */
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [organizing, id]);
+
   async function saveSummary() {
     if (!k) return;
     try {
@@ -128,7 +147,6 @@ export function DetailPage() {
   }
 
   const meta = SOURCE_META[k.source_type];
-  const organizing = k.organize_status === 'pending' || k.organize_status === 'processing';
 
   return (
     <>

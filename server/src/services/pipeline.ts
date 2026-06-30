@@ -67,10 +67,12 @@ export async function processKnowledge(
   setOrganizeStatus(db, id, 'processing');
   const log = logger.child({ knowledge_id: id });
   try {
+    // 先建向量（快）——检索/相关推荐/RAG 立即可用，不被慢的标签摘要阻塞。
+    await buildEmbeddings(db, provider, id, k.content);
+    // 再做标签/摘要（慢，依赖 chat）。
     const result = await organize(provider, k.content);
     setTags(db, id, result.tags);
     if (result.summary) setSummary(db, id, result.summary);
-    await buildEmbeddings(db, provider, id, k.content);
     setOrganizeStatus(db, id, 'done');
     log.info('整理完成', { tags: result.tags.length });
     return { ok: true };
