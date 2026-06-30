@@ -11,3 +11,4 @@ coverage/
 web/.e2e-data/
 web/test-results/
 web/playwright-report/
+.run/

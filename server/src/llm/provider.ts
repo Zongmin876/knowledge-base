@@ -65,7 +65,7 @@ export class OllamaProvider implements LlmProvider {
       const res = await fetch(`${this.baseUrl}/api/embeddings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: this.embedModel, prompt: text }),
+        body: JSON.stringify({ model: this.embedModel, prompt: text, keep_alive: config.ollamaKeepAlive }),
         signal,
       });
       if (!res.ok) throw new LlmError(`Ollama embeddings HTTP ${res.status}`, res.status >= 500, 'http');
@@ -82,7 +82,7 @@ export class OllamaProvider implements LlmProvider {
       const res = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: this.chatModel, stream: false, messages }),
+        body: JSON.stringify({ model: this.chatModel, stream: false, messages, keep_alive: config.ollamaKeepAlive }),
         signal,
       });
       if (!res.ok) throw new LlmError(`Ollama chat HTTP ${res.status}`, res.status >= 500, 'http');

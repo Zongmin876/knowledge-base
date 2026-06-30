@@ -28,6 +28,11 @@ export const config = {
     : path.resolve(__dirname, '..', 'data'),
   /** 本地 Ollama 端点：local-first 形态本身的默认值。 */
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+  /**
+   * Ollama 模型常驻内存时长（keep_alive）。控制空闲后多久卸载模型释放内存。
+   * 取值如 "5m"（默认，保持热）/ "30s"（省内存）/ "0"（每次调用后立即卸载）/ "-1"（永久常驻）。
+   */
+  ollamaKeepAlive: process.env.ZKB_OLLAMA_KEEP_ALIVE || '5m',
   /** 默认模型（首次启动写入 settings 表，之后以 DB 为准，可在设置页改）。 */
   defaultChatModel: process.env.ZKB_CHAT_MODEL || 'llama3.1:8b',
   defaultEmbedModel: process.env.ZKB_EMBED_MODEL || 'nomic-embed-text',
