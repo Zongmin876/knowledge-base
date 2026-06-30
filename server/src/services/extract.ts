@@ -28,20 +28,40 @@ export interface Article {
 }
 
 function isWeixin(url: string, html: string): boolean {
-  return /mp\.weixin\.qq\.com/i.test(url) || /id=["']js_content["']/i.test(html);
+  return (
+    /mp\.weixin\.qq\.com/i.test(url) ||
+    /id=["']js_content["']/i.test(html) ||
+    /rich_media_content/i.test(html)
+  );
 }
 
-function textFromNode(doc: Document, selectors: string[]): string {
+/** 公众号反爬/验证拦截页特征（环境异常、需验证、内容已删除等）。 */
+function isWeixinBlocked(doc: Document, html: string): boolean {
+  const t = (doc.querySelector('.weui-msg__title')?.textContent ?? '').trim();
+  return (
+    /环境异常|去验证|请在微信客户端打开|访问过于频繁/.test(html) ||
+    /该内容已被发布者删除|此内容因违规无法查看|参数错误/.test(html) ||
+    t.length > 0
+  );
+}
+
+/** 公众号正文里的非正文噪音（赞赏/关注/工具栏/二维码等）。 */
+const WEIXIN_NOISE = [
+  '.rich_media_tool', '.reward_area', '.qr_code_pc', '.promotion_area',
+  '#js_pc_qr_code', '.rich_media_meta_list', '.js_img_placeholder', '.code_snippet_view',
+];
+
+function textFromNode(doc: Document, selectors: string[], stripSelectors: string[] = []): string {
   for (const sel of selectors) {
     const el = doc.querySelector(sel);
     if (el && (el.textContent ?? '').trim().length > 0) {
-      // 用 innerText 风格：块级元素间补换行。
-      const html = el.innerHTML;
-      const tmp = new JSDOM(`<body>${html}</body>`).window.document.body;
-      tmp.querySelectorAll('p, br, div, h1, h2, h3, li').forEach((n) => {
+      // 用 innerText 风格：块级元素间补换行。先剔除噪音节点。
+      const tmp = new JSDOM(`<body>${el.innerHTML}</body>`).window.document.body;
+      stripSelectors.forEach((s) => tmp.querySelectorAll(s).forEach((n) => n.remove()));
+      tmp.querySelectorAll('p, br, div, section, h1, h2, h3, h4, h5, li, blockquote').forEach((n) => {
         n.append('\n');
       });
-      return (tmp.textContent ?? '').replace(/\n{3,}/g, '\n\n').trim();
+      return (tmp.textContent ?? '').replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n').trim();
     }
   }
   return '';
@@ -54,12 +74,21 @@ export function extractArticle(html: string, url = ''): Article {
   const doc = dom.window.document;
 
   if (isWeixin(url, html)) {
+    // 反爬/验证拦截页 → 明确失败信号，驱动前端回退「剪藏扩展」或「粘贴正文」。
+    if (isWeixinBlocked(doc, html)) {
+      throw new FetchError('公众号反爬/验证页，无法直接抓取（请用浏览器剪藏扩展或粘贴正文）', 'network');
+    }
+    // og:title 从原始 html 取（sanitize 会移除 <meta>）。
+    const ogTitle = html.match(
+      /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+    )?.[1]?.trim();
     const title =
       doc.querySelector('#activity-name')?.textContent?.trim() ||
+      ogTitle ||
       doc.querySelector('h1')?.textContent?.trim() ||
       doc.title?.trim() ||
       '未命名';
-    const content = textFromNode(doc, ['#js_content', '.rich_media_content']);
+    const content = textFromNode(doc, ['#js_content', '.rich_media_content'], WEIXIN_NOISE);
     if (!content) throw new FetchError('公众号正文为空', 'network');
     return { title, content: sanitizeContent(content), viaWeixin: true };
   }

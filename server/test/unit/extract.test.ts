@@ -47,6 +47,33 @@ describe('U-ING-02 公众号正文适配', () => {
   });
 });
 
+describe('公众号抓取增强（阶段二②）', () => {
+  it('og:title 兜底标题 + section 段落 + 去赞赏/关注噪音', () => {
+    const html = `<!doctype html><html><head>
+      <meta property="og:title" content="Redis 高可用实战" /><title>微信</title></head>
+      <body><div id="js_content">
+        <section>第一段：主从复制是基础。</section>
+        <section>第二段：哨兵负责故障转移。</section>
+        <div class="rich_media_tool">赞赏 关注 在看</div>
+        <div class="reward_area">长按二维码赞赏作者</div>
+      </div></body></html>`;
+    const art = extractArticle(html, 'https://mp.weixin.qq.com/s/x');
+    expect(art.viaWeixin).toBe(true);
+    expect(art.title).toBe('Redis 高可用实战'); // 无 #activity-name 时用 og:title
+    expect(art.content).toContain('主从复制');
+    expect(art.content).toContain('哨兵');
+    expect(art.content).not.toContain('赞赏作者'); // 噪音被剔除
+  });
+
+  it('反爬/验证拦截页抛 FetchError，给出回退提示', () => {
+    const blocked = `<!doctype html><html><body>
+      <div id="js_content"></div>
+      <div class="weui-msg__title">环境异常</div>
+      <p>当前环境异常，完成验证后即可继续访问。去验证</p></body></html>`;
+    expect(() => extractArticle(blocked, 'https://mp.weixin.qq.com/s/y')).toThrow(/反爬|验证/);
+  });
+});
+
 describe('U-ING-08 抓取正文脚本清洗', () => {
   it('提取结果不含可执行脚本', () => {
     const art = extractArticle(WEIXIN_HTML, 'https://mp.weixin.qq.com/s/abc');
