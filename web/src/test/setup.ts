@@ -15,9 +15,12 @@ class IOStub {
 }
 vi.stubGlobal('IntersectionObserver', IOStub);
 
-// scrollIntoView 在 jsdom 中缺失
+// scrollIntoView / scrollTo 在 jsdom 中缺失
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = () => {};
+}
+if (!Element.prototype.scrollTo) {
+  Element.prototype.scrollTo = () => {};
 }
 
 // 部分 jsdom 环境 localStorage 不完整：提供内存实现。
