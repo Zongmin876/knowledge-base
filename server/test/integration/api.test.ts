@@ -62,6 +62,48 @@ describe('知识 CRUD + 分页 API', () => {
   });
 });
 
+describe('浏览器剪藏 /ingest/clip（阶段二）', () => {
+  let db: Db;
+  let app: Express;
+  beforeEach(() => {
+    db = memDb();
+    app = makeApp(db, new StubProvider());
+    resetRateLimits();
+  });
+
+  const WEIXIN_HTML = `<!doctype html><html><head><title>微信文章</title></head><body>
+    <h1 id="activity-name">分布式锁实战</h1>
+    <div id="js_content"><p>分布式锁可用 Redis SETNX 实现。</p><p>注意锁续期与误删，可用 Redisson。</p></div>
+    <script>window.x=1</script></body></html>`;
+
+  it('提交页面 HTML+URL → 服务端提取正文入库（绕过反爬，复用 extractArticle）', async () => {
+    const res = await request(app)
+      .post('/api/ingest/clip')
+      .send({ url: 'https://mp.weixin.qq.com/s/abc', html: WEIXIN_HTML });
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBeTruthy();
+    expect(res.body.title).toBe('分布式锁实战');
+    // 读回确认真实落库、正文提取、来源类型与 url
+    const detail = await request(app).get(`/api/knowledge/${res.body.id}`);
+    expect(detail.body.content).toContain('SETNX');
+    expect(detail.body.content).not.toMatch(/<script/i); // 脚本已清洗
+    expect(detail.body.source_type).toBe('link');
+    expect(detail.body.source_url).toBe('https://mp.weixin.qq.com/s/abc');
+  });
+
+  it('空 HTML 提取不到正文 → 返回错误码（不静默入空库）', async () => {
+    const res = await request(app)
+      .post('/api/ingest/clip')
+      .send({ url: 'https://x.test/p', html: '<html><body></body></html>' });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('缺 html/url 参数 → 400', async () => {
+    const res = await request(app).post('/api/ingest/clip').send({ url: 'https://x.test' });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('S-SEC 安全', () => {
   let db: Db;
   let app: Express;

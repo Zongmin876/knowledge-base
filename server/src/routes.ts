@@ -11,7 +11,7 @@ import { rateLimit } from './middleware/ratelimit.ts';
 import { badRequest, notFound } from './middleware/error.ts';
 import * as repo from './services/knowledge.ts';
 import { ingest, processKnowledge, reindexKnowledge } from './services/pipeline.ts';
-import { fetchAndExtract } from './services/extract.ts';
+import { fetchAndExtract, extractArticle } from './services/extract.ts';
 import { parseFile } from './services/fileparse.ts';
 import { semanticSearch, relatedKnowledge } from './services/search.ts';
 import { answerQuestion } from './services/rag.ts';
@@ -49,6 +49,10 @@ const createSchema = z.object({
 });
 
 const linkSchema = z.object({ url: z.string().url('链接格式不合法') });
+const clipSchema = z.object({
+  url: z.string().url('链接格式不合法'),
+  html: z.string().min(1, '页面内容为空'),
+});
 const fileSchema = z.object({
   filename: z.string().min(1),
   contentBase64: z.string().min(1),
@@ -124,6 +128,26 @@ export function buildRouter(ctx: RouteCtx): Router {
       const parsed = linkSchema.safeParse(req.body);
       if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? 'URL 非法');
       const article = await fetchAndExtract(parsed.data.url); // 失败抛 FetchError → 502 可回退
+      const { id, deduped } = ingest(ctx.db, {
+        title: article.title,
+        content: article.content,
+        source_type: 'link',
+        source_url: parsed.data.url,
+      });
+      ctx.nudgeWorker?.();
+      res.status(201).json({ id, deduped, title: article.title, viaWeixin: article.viaWeixin });
+    }),
+  );
+
+  // ---- 浏览器剪藏录入（扩展把当前页 outerHTML+url 发来，服务端提取正文）----
+  // 用浏览器已渲染/已登录的页面，天然绕过公众号等反爬；复用 extractArticle（含公众号适配）。
+  r.post(
+    '/ingest/clip',
+    writeLimit,
+    wrap((req, res) => {
+      const parsed = clipSchema.safeParse(req.body);
+      if (!parsed.success) throw badRequest(parsed.error.issues[0]?.message ?? '参数非法');
+      const article = extractArticle(parsed.data.html, parsed.data.url); // 提取不到正文抛 FetchError → 502
       const { id, deduped } = ingest(ctx.db, {
         title: article.title,
         content: article.content,
