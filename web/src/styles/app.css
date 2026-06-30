@@ -280,6 +280,12 @@ button { font-family: inherit; }
 .recycle-row .restore { color: var(--accent); font-size: var(--fs-sm); cursor: pointer; background: none; border: none; }
 .settings-card .input { height: 40px; background: var(--bg-sunken); }
 
+/* ===== 关系图谱 ===== */
+.graph-canvas { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: var(--sp-3); }
+.graph-canvas svg { display: block; width: 100%; height: auto; }
+.graph-legend { text-align: center; padding: var(--sp-3) 0 var(--sp-1); }
+.graph-canvas g text { user-select: none; }
+
 /* ===== 表单元素 ===== */
 .field { margin-bottom: var(--sp-4); }
 .field label { display: block; font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-body); margin-bottom: var(--sp-2); }

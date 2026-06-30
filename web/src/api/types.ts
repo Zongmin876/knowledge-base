@@ -75,6 +75,22 @@ export interface ModelSettingsPublic {
   hasCloudApiKey: boolean;
 }
 
+export interface GraphNode {
+  id: string;
+  title: string;
+  tags: string[];
+  degree: number;
+}
+export interface GraphEdge {
+  source: string;
+  target: string;
+  weight: number;
+}
+export interface Graph {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+}
+
 export interface DataStats {
   knowledge: number;
   deleted: number;

@@ -14,6 +14,7 @@ import { ingest, processKnowledge, reindexKnowledge } from './services/pipeline.
 import { fetchAndExtract, extractArticle } from './services/extract.ts';
 import { parseFile } from './services/fileparse.ts';
 import { semanticSearch, relatedKnowledge } from './services/search.ts';
+import { buildGraph } from './services/graph.ts';
 import { answerQuestion } from './services/rag.ts';
 import { exportData, importData } from './services/backup.ts';
 import {
@@ -353,6 +354,16 @@ export function buildRouter(ctx: RouteCtx): Router {
       const provider = createProvider(getModelSettings(ctx.db));
       const health = await provider.health();
       res.json(health);
+    }),
+  );
+
+  // ---- 关系图谱（阶段二③）----
+  r.get(
+    '/graph',
+    wrap((req, res) => {
+      const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 120));
+      const minRelevance = Math.min(100, Math.max(0, Number(req.query.minRelevance) || 55));
+      res.json(buildGraph(ctx.db, { limit, minRelevance }));
     }),
   );
 

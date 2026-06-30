@@ -6,6 +6,7 @@ import { api } from '../api/client.ts';
 const NAV = [
   { to: '/', label: '全部知识', icon: '📚', end: true },
   { to: '/tags', label: '标签', icon: '🏷️', end: false },
+  { to: '/graph', label: '图谱', icon: '🕸️', end: false },
   { to: '/ask', label: '问答', icon: '💬', end: false },
   { to: '/settings', label: '设置', icon: '⚙️', end: false },
 ];

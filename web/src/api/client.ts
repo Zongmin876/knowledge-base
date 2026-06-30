@@ -10,6 +10,7 @@ import type {
   DataStats,
   HealthResult,
   SourceType,
+  Graph,
 } from './types.ts';
 
 export class ApiError extends Error {
@@ -102,6 +103,13 @@ export const api = {
     req<ModelSettingsPublic>('/settings/model', { method: 'PUT', body: JSON.stringify(body) }),
   testModel: () => req<{ ok: boolean; detail: string }>('/settings/model/test', { method: 'POST' }),
 
+  graph: (minRelevance?: number, limit?: number) => {
+    const p = new URLSearchParams();
+    if (minRelevance != null) p.set('minRelevance', String(minRelevance));
+    if (limit != null) p.set('limit', String(limit));
+    const qs = p.toString();
+    return req<Graph>(`/graph${qs ? `?${qs}` : ''}`);
+  },
   stats: () => req<DataStats>('/stats'),
   exportBackup: () => req<unknown>('/backup/export'),
   importBackup: (payload: unknown) => req<{ imported: number }>('/backup/import', { method: 'POST', body: JSON.stringify(payload) }),
