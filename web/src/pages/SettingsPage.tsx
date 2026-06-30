@@ -19,6 +19,7 @@ export function SettingsPage() {
   const [cloudKey, setCloudKey] = useState('');
   const [cloudBase, setCloudBase] = useState('');
   const [cloudModel, setCloudModel] = useState('');
+  const [localModels, setLocalModels] = useState<string[]>([]);
   const [confirmEmpty, setConfirmEmpty] = useState(false);
 
   const reloadRecycle = useCallback(async () => {
@@ -36,8 +37,19 @@ export function SettingsPage() {
     }).catch((e) => toast.show(e instanceof ApiError ? e.message : '加载设置失败', 'danger'));
     api.health().then((h) => setConn(h.model)).catch(() => setConn({ ok: false, detail: '未连接' }));
     api.stats().then(setStats).catch(() => {});
+    api.listLocalModels().then((r) => setLocalModels(r.models)).catch(() => setLocalModels([]));
     reloadRecycle().catch(() => {});
   }, [reloadRecycle, toast]);
+
+  async function switchLocalModel(name: string) {
+    try {
+      const updated = await api.updateModel({ chatModel: name });
+      setModel(updated);
+      toast.show(`本地模型已切换为 ${name}`, 'success');
+    } catch (e) {
+      toast.show(e instanceof ApiError ? e.message : '切换失败', 'danger');
+    }
+  }
 
   async function switchProvider(provider: 'local' | 'cloud') {
     try {
@@ -186,10 +198,29 @@ export function SettingsPage() {
           )}
 
           {provider === 'local' && (
-            <div className="row-between" style={{ marginTop: 'var(--sp-3)' }}>
-              <span className="stat">{conn?.detail ?? ''}</span>
-              <button className="btn btn-sm" onClick={testConn}>测试连接</button>
-            </div>
+            <>
+              <div className="field">
+                <label htmlFor="local-model">本地模型</label>
+                <select
+                  id="local-model"
+                  className="input"
+                  value={model?.chatModel ?? ''}
+                  onChange={(e) => switchLocalModel(e.target.value)}
+                >
+                  {/* 当前模型即使未在已装列表中也保证可见 */}
+                  {model && !localModels.includes(model.chatModel) && (
+                    <option value={model.chatModel}>{model.chatModel}</option>
+                  )}
+                  {localModels.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="row-between" style={{ marginTop: 'var(--sp-3)' }}>
+                <span className="stat">{conn?.detail ?? ''}</span>
+                <button className="btn btn-sm" onClick={testConn}>测试连接</button>
+              </div>
+            </>
           )}
 
           <div className="privacy">

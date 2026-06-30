@@ -21,7 +21,7 @@ import {
   getModelSettings,
   updateModelSettings,
 } from './services/settings.ts';
-import { createProvider } from './llm/provider.ts';
+import { createProvider, listLocalChatModels } from './llm/provider.ts';
 
 export interface RouteCtx {
   db: Db;
@@ -312,6 +312,15 @@ export function buildRouter(ctx: RouteCtx): Router {
       res.json(getPublicModelSettings(ctx.db));
     }),
   );
+  // 列出本地可对话模型（设置页下拉用）。
+  r.get(
+    '/settings/local-models',
+    wrap(async (_req, res) => {
+      const models = await listLocalChatModels();
+      res.json({ models });
+    }),
+  );
+
   r.post(
     '/settings/model/test',
     aiLimit,

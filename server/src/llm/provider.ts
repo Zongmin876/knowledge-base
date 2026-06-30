@@ -170,6 +170,26 @@ export class OpenAICompatProvider implements LlmProvider {
   }
 }
 
+/**
+ * 列出本地 Ollama 已安装的可对话模型（供设置页下拉）。
+ * 过滤掉 embedding 类模型（名字含 embed/bge 的不适合做 chat）。
+ * Ollama 不可达时抛 LlmError(retryable)。
+ */
+export async function listLocalChatModels(baseUrl = config.ollamaBaseUrl): Promise<string[]> {
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/api/tags`, { signal: AbortSignal.timeout(8000) });
+  } catch (err) {
+    throw new LlmError(`Ollama 不可达: ${(err as Error).message}`, true, 'network');
+  }
+  if (!res.ok) throw new LlmError(`Ollama HTTP ${res.status}`, res.status >= 500, 'http');
+  const data = (await res.json()) as { models?: { name: string }[] };
+  return (data.models ?? [])
+    .map((m) => m.name)
+    .filter((n) => !/embed|bge/i.test(n))
+    .sort();
+}
+
 /** 按设置构造 provider。云端缺关键配置即 throw（红线：配置缺失 throw）。 */
 export function createProvider(settings: ModelSettings): LlmProvider {
   if (settings.provider === 'cloud') {

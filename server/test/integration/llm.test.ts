@@ -4,6 +4,7 @@ import {
   OllamaProvider,
   OpenAICompatProvider,
   LlmError,
+  listLocalChatModels,
 } from '../../src/llm/provider.ts';
 import type { ChatMessage } from '../../src/llm/provider.ts';
 import { config } from '../../src/config.ts';
@@ -96,6 +97,15 @@ describe.runIf(true)('I-LLM 真实本地 Ollama（离线可用硬门）', () => 
     const b = await p.embed('完全不同的另一段较长文本内容');
     expect(a.length).toBeGreaterThan(0);
     expect(a.length).toBe(b.length);
+  });
+
+  it('列出本地可对话模型：返回非空且不含 embedding 模型', async () => {
+    if (!hasOllama) throw new Error('本地 Ollama 不可用');
+    const models = await listLocalChatModels();
+    expect(Array.isArray(models)).toBe(true);
+    expect(models.length).toBeGreaterThan(0);
+    expect(models.some((n) => /embed|bge/i.test(n))).toBe(false);
+    expect(models).toContain(config.defaultChatModel);
   });
 
   it('I-LLM-03 / I-LLM-06 离线整理流水线端到端贯通（真实本地模型）', async () => {

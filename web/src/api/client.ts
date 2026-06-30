@@ -97,6 +97,7 @@ export const api = {
   emptyRecycle: () => req<{ purged: number }>('/recycle', { method: 'DELETE' }),
 
   getModel: () => req<ModelSettingsPublic>('/settings/model'),
+  listLocalModels: () => req<{ models: string[] }>('/settings/local-models'),
   updateModel: (body: Partial<{ provider: 'local' | 'cloud'; chatModel: string; embedModel: string; cloudBaseUrl: string; cloudApiKey: string }>) =>
     req<ModelSettingsPublic>('/settings/model', { method: 'PUT', body: JSON.stringify(body) }),
   testModel: () => req<{ ok: boolean; detail: string }>('/settings/model/test', { method: 'POST' }),

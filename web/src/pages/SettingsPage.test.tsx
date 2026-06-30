@@ -13,6 +13,7 @@ vi.mock('../api/client.ts', async () => {
     api: {
       getModel: vi.fn(), health: vi.fn(), stats: vi.fn(), recycle: vi.fn(),
       updateModel: vi.fn(), testModel: vi.fn(), exportBackup: vi.fn(), restore: vi.fn(), emptyRecycle: vi.fn(),
+      listLocalModels: vi.fn(),
     },
   };
 });
@@ -35,6 +36,7 @@ beforeEach(() => {
   m.health.mockResolvedValue({ status: 'ok', model: { ok: true, detail: '本地 Ollama 就绪' } });
   m.stats.mockResolvedValue({ knowledge: 128, deleted: 2, tags: 24, embeddings: 320 });
   m.recycle.mockResolvedValue({ items: [], total: 0, page: 1, pageSize: 50 });
+  m.listLocalModels.mockResolvedValue({ models: ['llama3.1:8b', 'qwen2.5:32b', 'gemma4:26b'] });
 });
 
 describe('C-SET-02 连接状态徽标', () => {
@@ -53,12 +55,28 @@ describe('C-SET-01 / C-SET-03 模型切换与 Key 脱敏', () => {
   it('切到云端持久化并出现 password 类型 Key 输入', async () => {
     m.updateModel.mockResolvedValue({ ...localModel, provider: 'cloud' });
     renderPage();
-    // 等初始 getModel 落地（模型名出现），避免初始加载覆盖切换结果
-    await screen.findByText(/llama3.1:8b/);
+    // 等初始 getModel 落地（本地模型下拉拿到当前值），避免初始加载覆盖切换结果
+    await waitFor(() => expect((screen.getByLabelText('本地模型') as HTMLSelectElement).value).toBe('llama3.1:8b'));
     await userEvent.click(screen.getByTestId('opt-cloud'));
     await waitFor(() => expect(m.updateModel).toHaveBeenCalledWith({ provider: 'cloud' }));
     const keyInput = await screen.findByLabelText(/API Key/);
     expect(keyInput).toHaveAttribute('type', 'password');
+  });
+});
+
+describe('本地模型下拉切换', () => {
+  it('下拉列出已装模型，选择后调用 updateModel(chatModel)', async () => {
+    m.updateModel.mockResolvedValue({ ...localModel, chatModel: 'qwen2.5:32b' });
+    renderPage();
+    const select = (await screen.findByLabelText('本地模型')) as HTMLSelectElement;
+    // 列出后端返回的模型
+    expect(within(select).getByRole('option', { name: 'qwen2.5:32b' })).toBeInTheDocument();
+    expect(within(select).getByRole('option', { name: 'gemma4:26b' })).toBeInTheDocument();
+    // 当前值为 llama3.1:8b
+    expect(select.value).toBe('llama3.1:8b');
+    await userEvent.selectOptions(select, 'qwen2.5:32b');
+    await waitFor(() => expect(m.updateModel).toHaveBeenCalledWith({ chatModel: 'qwen2.5:32b' }));
+    await waitFor(() => expect((screen.getByLabelText('本地模型') as HTMLSelectElement).value).toBe('qwen2.5:32b'));
   });
 });
 
