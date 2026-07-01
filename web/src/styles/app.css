@@ -278,7 +278,7 @@ button { font-family: inherit; }
 .recycle-row:last-of-type { border-bottom: none; }
 .recycle-row .t { color: var(--text-body); }
 .recycle-row .restore { color: var(--accent); font-size: var(--fs-sm); cursor: pointer; background: none; border: none; }
-.settings-card .input { height: 40px; background: var(--bg-sunken); }
+.settings-card .input { height: 40px; padding: 0 var(--sp-4); background: var(--bg-sunken); }
 
 /* ===== 关系图谱 ===== */
 .graph-canvas { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: var(--sp-3); }
