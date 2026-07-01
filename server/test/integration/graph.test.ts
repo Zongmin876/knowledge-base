@@ -5,7 +5,24 @@ import { createKnowledge } from '../../src/services/knowledge.ts';
 import { buildEmbeddings } from '../../src/services/embedding.ts';
 import { buildGraph } from '../../src/services/graph.ts';
 
-const stub = new StubProvider();
+/**
+ * 受控“各向异性”嵌入：大共同分量（各向异性地板）+ 小主题分量。
+ * 这样任意两文本的【原始】余弦都 >0.9（红烧肉 vs 缓存也高达 0.93），复现真实句向量的问题；
+ * buildGraph 做均值中心化后，缓存簇仍强相关、红烧肉转为强负相关 → 验证 issue #5 的修复。
+ */
+function anisoEmbed(text: string): number[] {
+  const v = new Array<number>(8).fill(5); // 各向异性共同分量
+  if (text.includes('缓存')) v[0] += 4; // 缓存簇共同方向
+  if (text.includes('穿透')) v[1] += 1.2;
+  if (text.includes('击穿')) v[2] += 1.2;
+  if (text.includes('雪崩')) v[3] += 1.2;
+  if (text.includes('红烧肉')) {
+    v[4] += 4;
+    v[5] += 1.2;
+  } // 完全不同方向
+  return v;
+}
+const stub = new StubProvider({ embedFn: anisoEmbed });
 
 async function seed(db: Db) {
   const data = [
@@ -56,12 +73,20 @@ describe('关系图谱（阶段二③）', () => {
     expect(cacheDegreeSum).toBeGreaterThan(hongDegree);
   });
 
-  it('默认阈值下无关知识（红烧肉）不与缓存簇连边（issue #5）', async () => {
+  it('默认阈值下无关知识（红烧肉）不连边，但缓存簇仍连通（issue #5 中心化修复）', async () => {
     const db = memDb();
     await seed(db);
     const g = buildGraph(db); // 默认 minRelevance=55
     const hong = g.nodes.find((n) => n.title === '红烧肉')!;
+    const cacheSum = ['缓存穿透', '缓存击穿', '缓存雪崩']
+      .map((t) => g.nodes.find((n) => n.title === t)!.degree)
+      .reduce((s, d) => s + d, 0);
+    // 原始余弦下红烧肉与缓存高达 0.93 会误连；中心化后红烧肉转负相关 → 零连边
     expect(hong.degree).toBe(0);
+    // 缓存三兄弟仍应相互连通（证明不是把所有边都杀掉）
+    expect(cacheSum).toBeGreaterThan(0);
+    // 红烧肉不应出现在任何一条边里
+    expect(g.edges.some((e) => e.source === hong.id || e.target === hong.id)).toBe(false);
   });
 
   it('空库返回空图不报错', () => {

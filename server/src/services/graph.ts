@@ -39,6 +39,30 @@ function centroids(db: Db, allowedIds: Set<string>): Map<string, number[]> {
   return out;
 }
 
+/**
+ * 均值中心化（issue #5 根因修复）。
+ * 句向量存在各向异性：任意两段文本的原始余弦都偏高（实测 nomic 无关文本也有 0.5~0.6），
+ * 用绝对阈值必然给无关知识误连边。减去所有节点质心的均值后再算余弦，
+ * 无关文本落到 0 以下、相关文本仍为正，阈值才有区分度。
+ */
+function centerVectors(cents: Map<string, number[]>, ids: string[]): Map<string, number[]> {
+  if (ids.length === 0) return cents;
+  const dim = cents.get(ids[0])!.length;
+  const mean = new Array<number>(dim).fill(0);
+  for (const id of ids) {
+    const v = cents.get(id)!;
+    if (v.length !== dim) continue;
+    for (let i = 0; i < dim; i++) mean[i] += v[i];
+  }
+  for (let i = 0; i < dim; i++) mean[i] /= ids.length;
+  const out = new Map<string, number[]>();
+  for (const id of ids) {
+    const v = cents.get(id)!;
+    out.set(id, v.length === dim ? v.map((x, i) => x - mean[i]) : v);
+  }
+  return out;
+}
+
 export interface BuildGraphOpts {
   /** 节点上限（取最近 N 条），防 O(n²) 爆炸。 */
   limit?: number;
@@ -65,6 +89,8 @@ export function buildGraph(db: Db, opts: BuildGraphOpts = {}): Graph {
 
   const cents = centroids(db, idSet);
   const present = ids.filter((id) => cents.has(id));
+  // 均值中心化后再算相似度，消除句向量各向异性带来的“无关也高相似”（issue #5）。
+  const vecs = centerVectors(cents, present);
 
   // 两两相似度，每节点取 top edgesPerNode 且 ≥ 阈值，无向去重。
   const edgeKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
@@ -72,11 +98,11 @@ export function buildGraph(db: Db, opts: BuildGraphOpts = {}): Graph {
   const degree = new Map<string, number>();
 
   for (const a of present) {
-    const va = cents.get(a)!;
+    const va = vecs.get(a)!;
     const scored: { id: string; rel: number }[] = [];
     for (const b of present) {
       if (a === b) continue;
-      const vb = cents.get(b)!;
+      const vb = vecs.get(b)!;
       if (vb.length !== va.length) continue;
       const rel = toRelevance(cosine(va, vb));
       if (rel >= minRelevance) scored.push({ id: b, rel });
