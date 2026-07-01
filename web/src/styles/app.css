@@ -278,7 +278,7 @@ button { font-family: inherit; }
 .recycle-row:last-of-type { border-bottom: none; }
 .recycle-row .t { color: var(--text-body); }
 .recycle-row .restore { color: var(--accent); font-size: var(--fs-sm); cursor: pointer; background: none; border: none; }
-.settings-card .input { height: 40px; padding: 0 var(--sp-4); background: var(--bg-sunken); }
+.settings-card .input { background: var(--bg-sunken); }
 
 /* ===== 关系图谱 ===== */
 .graph-canvas { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-xs); padding: var(--sp-3); }
@@ -291,9 +291,12 @@ button { font-family: inherit; }
 .field label { display: block; font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-body); margin-bottom: var(--sp-2); }
 .input, .textarea, select.input {
   width: 100%; border: 1px solid var(--border); background: var(--bg-surface);
-  border-radius: var(--radius-md); padding: var(--sp-3); font-size: var(--fs-body);
+  border-radius: var(--radius-md); font-size: var(--fs-body);
   font-family: inherit; color: var(--text-body); transition: all var(--dur-normal) var(--ease);
 }
+/* 单行控件：固定 40px 高 + 仅水平内边距，避免垂直 padding 叠加 box-sizing 把字体截断（与设计原型一致） */
+.input, select.input { height: 40px; padding: 0 var(--sp-4); }
+.textarea { padding: var(--sp-3); }
 .input:focus, .textarea:focus, select.input:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px var(--ring-focus); }
 .textarea { resize: vertical; min-height: 120px; line-height: var(--lh-relaxed); }
 
