@@ -1,23 +1,21 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, waitFor } from '@testing-library/react';
 import { MarkdownView } from './MarkdownView.tsx';
 
 describe('MarkdownView 数学公式渲染（issue #7）', () => {
-  it('块级 $$…$$ 渲染为 KaTeX，不再显示原始 $$ 源码', () => {
+  it('块级 $$…$$ 渲染为 KaTeX，不再显示原始 $$ 源码', async () => {
     const { container } = render(
       <MarkdownView content={'核心公式：\n\n$$\n\\hat{y} = \\sigma(wx + b)\n$$\n\n完'} />,
     );
-    // KaTeX 产出 .katex；块级用 displayMode（.katex-display）
-    expect(container.querySelector('.katex')).not.toBeNull();
-    expect(container.querySelector('.math-block .katex-display')).not.toBeNull();
+    // KaTeX 按需异步加载：等待渲染完成。块级用 displayMode（.katex-display）
+    await waitFor(() => expect(container.querySelector('.math-block .katex-display')).not.toBeNull());
     // 不残留原始定界符
     expect(container.textContent).not.toContain('$$');
   });
 
-  it('行内 $…$ 渲染为 KaTeX', () => {
+  it('行内 $…$ 渲染为 KaTeX', async () => {
     const { container } = render(<MarkdownView content={'给定输入 $x$ 与权重 $w$ 计算。'} />);
-    const inline = container.querySelectorAll('.math-inline .katex');
-    expect(inline.length).toBe(2);
+    await waitFor(() => expect(container.querySelectorAll('.math-inline .katex').length).toBe(2));
     expect(container.textContent).not.toContain('$x$');
   });
 
