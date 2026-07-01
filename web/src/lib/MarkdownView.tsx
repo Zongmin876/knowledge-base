@@ -1,14 +1,31 @@
 /**
  * 极简且安全的 Markdown 渲染（S-SEC-03 前端层防御）：
- * 全程构造 React 元素、绝不使用 dangerouslySetInnerHTML，从根上杜绝 XSS。
- * 支持：标题 / 无序列表 / 加粗 / 行内代码 / 段落 / 换行。可选高亮关键词（检索命中片段）。
+ * 文本部分全程构造 React 元素、绝不注入用户原始 HTML，从根上杜绝 XSS。
+ * 支持：标题 / 无序列表 / 加粗 / 行内代码 / 段落 / 换行 / LaTeX 数学公式（块级 $$…$$、行内 $…$）。
+ *
+ * 数学公式用 KaTeX 渲染。KaTeX 的 renderToString 从 LaTeX 源生成结构受限的标记，
+ * 默认 trust:false（不产出 \href / 原始 HTML）、throwOnError:false（出错渲染为提示而非抛错），
+ * 因此对其输出使用 dangerouslySetInnerHTML 是安全的——注入的不是用户 HTML，而是 KaTeX 自身的公式标记。
  */
 import { Fragment, type ReactNode } from 'react';
+import katex from 'katex';
+
+function katexHtml(tex: string, displayMode: boolean): string {
+  return katex.renderToString(tex, { displayMode, throwOnError: false, output: 'html' });
+}
+
+function MathInline({ tex }: { tex: string }) {
+  return <span className="math-inline" dangerouslySetInnerHTML={{ __html: katexHtml(tex, false) }} />;
+}
+
+function MathBlock({ tex }: { tex: string }) {
+  return <div className="math-block" dangerouslySetInnerHTML={{ __html: katexHtml(tex, true) }} />;
+}
 
 function renderInline(text: string, highlight?: string): ReactNode[] {
-  // 先按 **bold** 与 `code` 切分；再对纯文本片段做高亮。
+  // 先按 **bold** / `code` / $行内公式$ 切分；再对纯文本片段做高亮。
   const nodes: ReactNode[] = [];
-  const regex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
+  const regex = /(\*\*[^*]+\*\*|`[^`]+`|\$(?!\s)[^$\n]+?(?<!\s)\$)/g;
   let last = 0;
   let m: RegExpExecArray | null;
   let key = 0;
@@ -35,18 +52,20 @@ function renderInline(text: string, highlight?: string): ReactNode[] {
     pushText(text.slice(last, m.index));
     const tok = m[0];
     if (tok.startsWith('**')) nodes.push(<strong key={key++}>{tok.slice(2, -2)}</strong>);
-    else nodes.push(<code key={key++} className="md-code">{tok.slice(1, -1)}</code>);
+    else if (tok.startsWith('`')) nodes.push(<code key={key++} className="md-code">{tok.slice(1, -1)}</code>);
+    else nodes.push(<MathInline key={key++} tex={tok.slice(1, -1)} />);
     last = m.index + tok.length;
   }
   pushText(text.slice(last));
   return nodes;
 }
 
-export function MarkdownView({ content, highlight }: { content: string; highlight?: string }) {
-  const lines = (content ?? '').split('\n');
+/** 渲染不含块级公式的一段文本（标题/列表/段落）。 */
+function renderTextBlocks(content: string, highlight: string | undefined, startKey: number): ReactNode[] {
+  const lines = content.split('\n');
   const blocks: ReactNode[] = [];
   let listBuf: string[] = [];
-  let key = 0;
+  let key = startKey;
   const flushList = () => {
     if (listBuf.length) {
       blocks.push(
@@ -82,5 +101,20 @@ export function MarkdownView({ content, highlight }: { content: string; highligh
     }
   }
   flushList();
+  return blocks;
+}
+
+export function MarkdownView({ content, highlight }: { content: string; highlight?: string }) {
+  // 先抽出块级公式 $$…$$（可跨行），其余文本按普通 Markdown 渲染。
+  const segments = (content ?? '').split(/\$\$([\s\S]*?)\$\$/);
+  const blocks: ReactNode[] = [];
+  segments.forEach((seg, i) => {
+    if (i % 2 === 1) {
+      const tex = seg.trim();
+      if (tex) blocks.push(<MathBlock key={`m${i}`} tex={tex} />);
+    } else if (seg) {
+      blocks.push(...renderTextBlocks(seg, highlight, i * 1000));
+    }
+  });
   return <div className="markdown">{blocks}</div>;
 }
