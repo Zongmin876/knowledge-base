@@ -7,19 +7,39 @@
  * 默认 trust:false（不产出 \href / 原始 HTML）、throwOnError:false（出错渲染为提示而非抛错），
  * 因此对其输出使用 dangerouslySetInnerHTML 是安全的——注入的不是用户 HTML，而是 KaTeX 自身的公式标记。
  */
-import { Fragment, type ReactNode } from 'react';
-import katex from 'katex';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { loadKatex } from './katexLoader.ts';
 
-function katexHtml(tex: string, displayMode: boolean): string {
-  return katex.renderToString(tex, { displayMode, throwOnError: false, output: 'html' });
+/** 按需渲染公式：动态加载 KaTeX，加载完成前用原始 tex 占位（避免闪烁空白）。 */
+function Math({ tex, display }: { tex: string; display: boolean }) {
+  const [html, setHtml] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    loadKatex().then((katex) => {
+      if (alive) setHtml(katex.renderToString(tex, { displayMode: display, throwOnError: false, output: 'html' }));
+    });
+    return () => {
+      alive = false;
+    };
+  }, [tex, display]);
+  const cls = display ? 'math-block' : 'math-inline';
+  if (html === null) {
+    const content = <span className="math-loading">{tex}</span>;
+    return display ? <div className={cls}>{content}</div> : <span className={cls}>{content}</span>;
+  }
+  return display ? (
+    <div className={cls} dangerouslySetInnerHTML={{ __html: html }} />
+  ) : (
+    <span className={cls} dangerouslySetInnerHTML={{ __html: html }} />
+  );
 }
 
 function MathInline({ tex }: { tex: string }) {
-  return <span className="math-inline" dangerouslySetInnerHTML={{ __html: katexHtml(tex, false) }} />;
+  return <Math tex={tex} display={false} />;
 }
 
 function MathBlock({ tex }: { tex: string }) {
-  return <div className="math-block" dangerouslySetInnerHTML={{ __html: katexHtml(tex, true) }} />;
+  return <Math tex={tex} display />;
 }
 
 function renderInline(text: string, highlight?: string): ReactNode[] {
