@@ -29,6 +29,23 @@ describe('U-ING-06 Markdown 解析', () => {
     expect(r.content).toContain('# Markdown 测试');
     expect(r.content).toContain('缓存击穿');
   });
+
+  it('GBK 编码的 .md 正确解码为中文而非乱码（issue #6）', async () => {
+    // “# 缓存击穿\n\n用互斥锁解决热点 key 失效。” 的 GBK 字节
+    const gbk = Buffer.from('2320bbbab4e6bbf7b4a90a0ad3c3bba5b3e2cbf8bde2bef6c8c8b5e3206b657920caa7d0a7a1a3', 'hex');
+    const r = await parseFile('gbk.md', gbk);
+    expect(r.content).toContain('缓存击穿');
+    expect(r.content).toContain('互斥锁');
+    expect(r.content).not.toMatch(/�/); // 无替换字符（乱码标志）
+  });
+
+  it('带 UTF-8 BOM 的 .md 去掉 BOM 正确解码', async () => {
+    const bom = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('# 标题\n正文中文', 'utf8')]);
+    const r = await parseFile('bom.md', bom);
+    expect(r.content.startsWith('﻿')).toBe(false);
+    expect(r.content).toContain('# 标题');
+    expect(r.content).toContain('正文中文');
+  });
 });
 
 describe('U-ING-07 损坏文件容错', () => {

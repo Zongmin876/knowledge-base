@@ -56,6 +56,14 @@ describe('关系图谱（阶段二③）', () => {
     expect(cacheDegreeSum).toBeGreaterThan(hongDegree);
   });
 
+  it('默认阈值下无关知识（红烧肉）不与缓存簇连边（issue #5）', async () => {
+    const db = memDb();
+    await seed(db);
+    const g = buildGraph(db); // 默认 minRelevance=55
+    const hong = g.nodes.find((n) => n.title === '红烧肉')!;
+    expect(hong.degree).toBe(0);
+  });
+
   it('空库返回空图不报错', () => {
     const db = memDb();
     const g = buildGraph(db);
