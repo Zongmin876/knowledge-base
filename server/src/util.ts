@@ -31,12 +31,11 @@ export function cosine(a: number[], b: number[]): number {
 }
 
 /**
- * 余弦相似度映射到 0–100 相关度（U-SR-06）。
- * 文本嵌入的余弦几乎不为负且整体偏高：无关文本常有 0.3~0.5 的余弦。
- * 旧的 (sim+1)/2 线性映射会把无关文本抬到 50%+，导致图谱给无关知识连边（见 issue #5）。
- * 改为直接取 max(0,sim)×100：余弦即相关度，无关文本落到阈值以下，不再误连。
+ * 余弦相似度（-1..1）映射到 0–100 相关度（U-SR-06）。
+ * 图谱对质心做均值中心化后余弦可为负（无关文本），此线性映射把 [-1,1] 映到 [0,100]，
+ * 让无关文本落到 50% 以下、相关文本在 55%+，配合阈值才有区分度（见 issue #5 的中心化处理）。
  */
 export function toRelevance(sim: number): number {
-  const clamped = Math.max(0, Math.min(1, sim));
-  return Math.round(clamped * 100);
+  const clamped = Math.max(-1, Math.min(1, sim));
+  return Math.round(((clamped + 1) / 2) * 100);
 }
